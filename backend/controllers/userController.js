@@ -14,7 +14,7 @@ const registerUser = asyncHandler(async (req, res) => {
     return res.status(400)
     throw new Error("Please include all fields")
   }
-
+  //Find if user already exists
   const userExists = await User.findOne({ email })
 
   if (userExists) {
@@ -38,7 +38,6 @@ const registerUser = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
-      token: generateToken(user._id),
     })
   } else {
     res.status(400)
