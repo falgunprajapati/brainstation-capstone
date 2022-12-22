@@ -7,24 +7,35 @@ import { extractErrorMessage } from "../../utils"
 const user = JSON.parse(localStorage.getItem("user"))
 
 const initialState = {
-  user: user ? user : null,
+  user: null,
+  isError: false,
+  isSuccess: false,
   isLoading: false,
+  message: "",
 }
 
 // Register new user
 export const register = createAsyncThunk(
   "auth/register",
   async (user, thunkAPI) => {
+    console.log(user)
     try {
       return await authService.register(user)
     } catch (error) {
-      return thunkAPI.rejectWithValue(extractErrorMessage(error))
+      const message =
+        (error.responce &&
+          error.responce.data &&
+          error.responce.data.message) ||
+        error.message ||
+        error.toString()
+      return thunkAPI.rejectWithValue(message)
     }
   }
 )
 
 // Login user
 export const login = createAsyncThunk("auth/login", async (user, thunkAPI) => {
+  console.log(user)
   try {
     return await authService.login(user)
   } catch (error) {
@@ -33,22 +44,23 @@ export const login = createAsyncThunk("auth/login", async (user, thunkAPI) => {
 })
 
 // Logout user
-// NOTE: here we don't need a thunk as we are not doing anything async so we can
-// use a createAction instead
+
 export const logout = createAction("auth/logout", () => {
   authService.logout()
-  // return an empty object as our payload as we don't need a payload but the
-  // prepare function requires a payload return
+
   return {}
 })
-
-// NOTE: in cases of login or register pending or rejected then user will
-// already be null so no need to set to null in these cases
 
 export const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
+    reset: (state) => {
+      state.isLoading = false
+      state.isError = false
+      state.isSuccess = false
+      state.message = ""
+    },
     logout: (state) => {
       state.user = null
     },
@@ -61,21 +73,17 @@ export const authSlice = createSlice({
       .addCase(register.fulfilled, (state, action) => {
         state.user = action.payload
         state.isLoading = false
+        state.isSuccess = true
       })
-      .addCase(register.rejected, (state) => {
+      .addCase(register.rejected, (state, action) => {
         state.isLoading = false
-      })
-      .addCase(login.pending, (state) => {
-        state.isLoading = false
-      })
-      .addCase(login.fulfilled, (state, action) => {
-        state.user = action.payload
-        state.isLoading = false
-      })
-      .addCase(login.rejected, (state) => {
-        state.isLoading = false
+        state.isError = true
+        state.message = action.payload
+        state.user = null
       })
   },
 })
+
+export const { reset } = authSlice.actions
 
 export default authSlice.reducer
